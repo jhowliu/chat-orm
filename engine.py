@@ -7,7 +7,7 @@ from config import *
 
 # [driver]://user:password@host/dbname
 engine = create_engine('mysql://{}:{}@{}/{}?charset=utf8' \
-            .format(USERNAME, HOSTNAME, PASSWORD, DATABASE))
+            .format(USERNAME, PASSWORD, HOSTNAME, DATABASE))
 
 
 Session = sessionmaker(bind=engine)
