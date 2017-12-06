@@ -14,15 +14,15 @@ class RobotHandler():
         self._sess = sess
 
     def get_robot_list(self):
-        rows = sess.query(Robots).all()
+        rows = self._sess.query(Robots).all()
         return map(lambda row: row.__dict__, rows)
 
     def get_robot_info(self):
-        row = sess.query(Robots).filter(Robots.VenderId == self._venderId).one()
+        row = self._sess.query(Robots).filter(Robots.VenderId == self._venderId).one()
         return row.__dict__
 
     def get_greeting_msg(self):
-        row = sess.query(Robots.GreetingMsg) \
+        row = self._sess.query(Robots.GreetingMsg) \
                   .filter(Robots.VenderId == self._venderId).one()
         if row.GreetingMsg:
             return row.GreetingMsg.splitlines()
@@ -30,7 +30,7 @@ class RobotHandler():
             return ["你好，請問需要什麼服務？"]
 
     def get_failed_msg(self):
-        row = sess.query(Robots.FailedMsg) \
+        row = self._sess.query(Robots.FailedMsg) \
                   .filter(Robots.VenderId == self._venderId).one()
         if row.FailedMsg:
             return row.FailedMsg.splitlines()
@@ -43,7 +43,7 @@ class RobotHandler():
 
         @return [dict]
         """
-        q = sess.query(Histories)
+        q = self._sess.query(Histories)
 
         if deviceId:
             q = q.filter(Histories.DeviceId == deviceId)
@@ -72,7 +72,7 @@ class RobotHandler():
         }
         """
         results = {}
-        rows = sess.query(Groups.GroupId, Questions.Content, Answers.Content) \
+        rows = self._sess.query(Groups.GroupId, Questions.Content, Answers.Content) \
                    .join(Robots) \
                    .filter(Robots.VenderId == self._venderId) \
                    .filter(Groups.GroupId  == Questions.GroupId) \
@@ -107,7 +107,7 @@ class RobotHandler():
         start_t = datetime.datetime.now()
         start_t -= datetime.timedelta(days=ndays)
 
-        rows = sess.query(func.date(Histories.CreateAt), \
+        rows = self._sess.query(func.date(Histories.CreateAt), \
                         func.count(func.distinct(Histories.DeviceId)), \
                         func.count(Histories.id)) \
                    .filter(Histories.CreateAt >= func.date(start_t)) \
@@ -123,40 +123,79 @@ class RobotHandler():
 
         return results
 
-    def save_qa(self, qas):
+    def add_new_groups(self, create_time):
+        """
+        Create a new group from new Q&A
+
+        @return group_id
+        """
+        robot = self.get_robot_info()
+
+        group = Groups(
+                    RobotId=robot['id'], \
+                    CreateAt=create_time \
+                )
+
+        self._sess.add(group)
+        self._sess.commit()
+
+        row = self._sess.query(func.max(Groups.GroupId)) \
+                        .first()
+
+        return row[0]
+
+    def add_qa(self, qa):
         """
         Save the Q&A
 
-        @param {
-            group_id: {
-                question
-                answer
-            }...
+        @param qa = {
+            question
+            answer
         }
 
         @return {
             success: true
         }
         """
+        create_time = datetime.datetime.now()
+        group_id = self.add_new_groups(create_time)
 
+        question = Questions(
+                      GroupId=group_id, \
+                      Content=qa['question'], \
+                      CreateAt=create_time, \
+                      UpdateAt=create_time \
+                   )
 
-if __name__ == '__main__':
-    handler = RobotHandler('HVC');
+        answer = Answers(
+                    GroupId=group_id, \
+                    Content=qa['answer'], \
+                    CreateAt=create_time, \
+                    UpdateAt=create_time \
+                 )
+        try:
+            self._sess.add(question)
+            self._sess.add(answer)
+            self._sess.commit()
+        except Exception as ex:
+            return {
+                'success': False,
+                'msg': str(ex)
+            }
 
-    print('\n===LIST ROBOTS===\n')
-    rows = handler.get_robot_list()
-    print(rows)
+        return { 'success': True }
 
-    print('\n===LIST ROBOT INFO===\n')
-    row = handler.get_robot_info()
-    print(row)
+    def add_qas(self, qas):
+        """
+        Add a list of Q&A
 
-    print('\n===LIST GREETING MSG===\n')
-    print(handler.get_greeting_msg())
+        @param qas=[
+            {
+                question
+                answer
+            },...
+        ]
+        """
+        for qa in qas:
+            self.add_qa(qa)
 
-    print('\n===LIST HISTORIES===\n')
-    print(handler.get_histories())
-
-    print(handler.get_qa_list())
-
-    print(handler.get_user_count())
