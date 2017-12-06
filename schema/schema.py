@@ -1,6 +1,7 @@
 from sqlalchemy import *
-from engine import engine
 from sqlalchemy.ext.declarative import declarative_base
+
+from database.config import engine
 
 meta = MetaData(bind=engine)
 

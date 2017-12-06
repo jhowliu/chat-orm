@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
+
 import datetime
 
-from schema import *
-from engine import sess
+from ..schema import *
+from ..config import sess
 
 from sqlalchemy.sql import func
 
@@ -198,4 +199,39 @@ class RobotHandler():
         """
         for qa in qas:
             self.add_qa(qa)
+
+if __name__ == '__main__':
+    handler = RobotHandler('HVC');
+
+    print('\n===LIST ROBOTS===\n')
+    rows = handler.get_robot_list()
+    print(rows)
+
+    print('\n===LIST ROBOT INFO===\n')
+    row = handler.get_robot_info()
+    print(row)
+
+    print('\n===LIST GREETING MSG===\n')
+    print(handler.get_greeting_msg())
+
+    print('\n===LIST HISTORIES===\n')
+    print(handler.get_histories())
+
+    print(handler.get_qa_list())
+
+    print(handler.get_user_count())
+
+    handler.add_qa({ \
+            'question': '我要吃火鍋', \
+            'answer': '我們沒有賣火鍋' \
+        })
+
+    handler.add_qas([{ \
+            'question': '我要訂高鐵票', \
+            'answer': '請問搭乘的時間是？' \
+        }, {
+            'question': '我想訂車票', \
+            'answer': '請問您是要高鐵還是火車？' \
+        }])
+
 
