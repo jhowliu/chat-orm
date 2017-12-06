@@ -1,6 +1,6 @@
 import unittest
 
-from database.handler import RobotHandler
+from database import RobotHandler
 
 if __name__ == '__main__':
     unittest.main()
